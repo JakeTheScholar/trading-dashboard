@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "exportedAt": "2025-04-01T12:00:00.000Z",
+  "accounts": [
+    {
+      "id": "demo-apex-eval",
+      "name": "Apex Eval 1",
+      "firm": "apex",
+      "phase": "eval",
+      "subtype": null,
+      "status": "active",
+      "startingBalance": 50000,
+      "trailingDrawdown": 2000,
+      "tradedBy": "bot",
+      "rules": "apex_50k_eval",
+      "createdAt": "2025-03-01T08:00:00.000Z",
+      "archivedAt": null
+    },
+    {
+      "id": "demo-topstep-funded",
+      "name": "Topstep Funded 1",
+      "firm": "topstep",
+      "phase": "funded",
+      "subtype": "normal",
+      "status": "active",
+      "startingBalance": 50000,
+      "trailingDrawdown": 2000,
+      "tradedBy": "bot",
+      "rules": "topstep_50k_normal",
+      "createdAt": "2025-02-15T08:00:00.000Z",
+      "archivedAt": null
+    },
+    {
+      "id": "demo-mff-funded",
+      "name": "MFF Core Funded 1",
+      "firm": "mff",
+      "phase": "funded",
+      "subtype": "core",
+      "status": "active",
+      "startingBalance": 50000,
+      "trailingDrawdown": 2000,
+      "tradedBy": "manual",
+      "rules": "mff_core_50k_funded",
+      "createdAt": "2025-02-20T08:00:00.000Z",
+      "archivedAt": null
+    }
+  ],
+  "journal": [
+    { "id": "d01", "accountId": "demo-apex-eval", "date": "2025-03-03", "pnl": 185, "entryPrice": 21420.50, "exitPrice": 21513.00, "entryTime": "09:35", "exitTime": "10:12", "tradedBy": "bot", "notes": "Clean ORB breakout long, held through first pullback", "createdAt": "2025-03-03T14:12:00.000Z" },
+    { "id": "d02", "accountId": "demo-apex-eval", "date": "2025-03-04", "pnl": -94, "entryPrice": 21550.25, "exitPrice": 21503.25, "entryTime": "09:32", "exitTime": "09:58", "tradedBy": "bot", "notes": "False breakout, stopped out quickly", "createdAt": "2025-03-04T13:58:00.000Z" },
+    { "id": "d03", "accountId": "demo-apex-eval", "date": "2025-03-05", "pnl": 312, "entryPrice": 21380.00, "exitPrice": 21536.00, "entryTime": "09:34", "exitTime": "10:45", "tradedBy": "bot", "notes": "Strong trend day, extended target hit", "createdAt": "2025-03-05T14:45:00.000Z" },
+    { "id": "d04", "accountId": "demo-apex-eval", "date": "2025-03-06", "pnl": 148, "entryPrice": 21475.00, "exitPrice": 21549.00, "entryTime": "09:36", "exitTime": "10:20", "tradedBy": "bot", "notes": "Solid setup, took first target", "createdAt": "2025-03-06T14:20:00.000Z" },
+    { "id": "d05", "accountId": "demo-apex-eval", "date": "2025-03-07", "pnl": -68, "entryPrice": 21610.00, "exitPrice": 21576.00, "entryTime": "09:33", "exitTime": "09:50", "tradedBy": "bot", "notes": "Choppy open, no follow-through", "createdAt": "2025-03-07T13:50:00.000Z" },
+    { "id": "d06", "accountId": "demo-apex-eval", "date": "2025-03-10", "pnl": 225, "entryPrice": 21490.00, "exitPrice": 21602.50, "entryTime": "09:35", "exitTime": "10:30", "tradedBy": "bot", "notes": "Gap fill setup worked perfectly", "createdAt": "2025-03-10T14:30:00.000Z" },
+    { "id": "d07", "accountId": "demo-apex-eval", "date": "2025-03-11", "pnl": 178, "entryPrice": 21565.00, "exitPrice": 21654.00, "entryTime": "09:38", "exitTime": "10:15", "tradedBy": "bot", "notes": "Continuation from yesterday's strength", "createdAt": "2025-03-11T14:15:00.000Z" },
+    { "id": "d08", "accountId": "demo-apex-eval", "date": "2025-03-12", "pnl": -42, "entryPrice": 21700.00, "exitPrice": 21679.00, "entryTime": "09:31", "exitTime": "09:45", "tradedBy": "bot", "notes": "CPI day, tight stop saved the account", "createdAt": "2025-03-12T13:45:00.000Z" },
+
+    { "id": "d09", "accountId": "demo-topstep-funded", "date": "2025-03-03", "pnl": 185, "entryPrice": 21420.50, "exitPrice": 21513.00, "entryTime": "09:35", "exitTime": "10:12", "tradedBy": "bot", "notes": "Auto-synced from TradingView email | LONG MNQ x2 | +46.3 pts", "createdAt": "2025-03-03T14:12:00.000Z" },
+    { "id": "d10", "accountId": "demo-topstep-funded", "date": "2025-03-04", "pnl": -94, "entryPrice": 21550.25, "exitPrice": 21503.25, "entryTime": "09:32", "exitTime": "09:58", "tradedBy": "bot", "notes": "Auto-synced from TradingView email | LONG MNQ x2 | -23.5 pts", "createdAt": "2025-03-04T13:58:00.000Z" },
+    { "id": "d11", "accountId": "demo-topstep-funded", "date": "2025-03-05", "pnl": 312, "entryPrice": 21380.00, "exitPrice": 21536.00, "entryTime": "09:34", "exitTime": "10:45", "tradedBy": "bot", "notes": "Auto-synced from TradingView email | LONG MNQ x2 | +78.0 pts", "createdAt": "2025-03-05T14:45:00.000Z" },
+    { "id": "d12", "accountId": "demo-topstep-funded", "date": "2025-03-06", "pnl": 148, "entryPrice": 21475.00, "exitPrice": 21549.00, "entryTime": "09:36", "exitTime": "10:20", "tradedBy": "bot", "notes": "Auto-synced from TradingView email | LONG MNQ x2 | +37.0 pts", "createdAt": "2025-03-06T14:20:00.000Z" },
+    { "id": "d13", "accountId": "demo-topstep-funded", "date": "2025-03-07", "pnl": -68, "entryPrice": 21610.00, "exitPrice": 21576.00, "entryTime": "09:33", "exitTime": "09:50", "tradedBy": "bot", "notes": "Auto-synced from TradingView email | LONG MNQ x2 | -17.0 pts", "createdAt": "2025-03-07T13:50:00.000Z" },
+    { "id": "d14", "accountId": "demo-topstep-funded", "date": "2025-03-10", "pnl": 225, "entryPrice": 21490.00, "exitPrice": 21602.50, "entryTime": "09:35", "exitTime": "10:30", "tradedBy": "bot", "notes": "Auto-synced from TradingView email | LONG MNQ x2 | +56.3 pts", "createdAt": "2025-03-10T14:30:00.000Z" },
+    { "id": "d15", "accountId": "demo-topstep-funded", "date": "2025-03-11", "pnl": 178, "entryPrice": 21565.00, "exitPrice": 21654.00, "entryTime": "09:38", "exitTime": "10:15", "tradedBy": "bot", "notes": "Auto-synced from TradingView email | LONG MNQ x2 | +44.5 pts", "createdAt": "2025-03-11T14:15:00.000Z" },
+    { "id": "d16", "accountId": "demo-topstep-funded", "date": "2025-03-12", "pnl": -42, "entryPrice": 21700.00, "exitPrice": 21679.00, "entryTime": "09:31", "exitTime": "09:45", "tradedBy": "bot", "notes": "Auto-synced from TradingView email | LONG MNQ x2 | -10.5 pts", "createdAt": "2025-03-12T13:45:00.000Z" },
+    { "id": "d17", "accountId": "demo-topstep-funded", "date": "2025-03-13", "pnl": 265, "entryPrice": 21580.00, "exitPrice": 21712.50, "entryTime": "09:34", "exitTime": "10:55", "tradedBy": "bot", "notes": "Auto-synced from TradingView email | LONG MNQ x2 | +66.3 pts", "createdAt": "2025-03-13T14:55:00.000Z" },
+
+    { "id": "d18", "accountId": "demo-mff-funded", "date": "2025-03-03", "pnl": 210, "entryPrice": 21425.00, "exitPrice": 21530.00, "entryTime": "09:40", "exitTime": "10:25", "tradedBy": "manual", "notes": "Manual scalp, read the order flow well", "createdAt": "2025-03-03T14:25:00.000Z" },
+    { "id": "d19", "accountId": "demo-mff-funded", "date": "2025-03-05", "pnl": -120, "entryPrice": 21480.00, "exitPrice": 21420.00, "entryTime": "09:45", "exitTime": "10:05", "tradedBy": "manual", "notes": "Revenge trade after missing the first move", "createdAt": "2025-03-05T14:05:00.000Z" },
+    { "id": "d20", "accountId": "demo-mff-funded", "date": "2025-03-06", "pnl": 165, "entryPrice": 21500.00, "exitPrice": 21582.50, "entryTime": "09:50", "exitTime": "10:35", "tradedBy": "manual", "notes": "Patient entry after the ORB settled", "createdAt": "2025-03-06T14:35:00.000Z" },
+    { "id": "d21", "accountId": "demo-mff-funded", "date": "2025-03-10", "pnl": 290, "entryPrice": 21460.00, "exitPrice": 21605.00, "entryTime": "09:38", "exitTime": "11:00", "tradedBy": "manual", "notes": "Let the winner run, trailed stop well", "createdAt": "2025-03-10T15:00:00.000Z" },
+    { "id": "d22", "accountId": "demo-mff-funded", "date": "2025-03-11", "pnl": -85, "entryPrice": 21620.00, "exitPrice": 21577.50, "entryTime": "09:42", "exitTime": "10:00", "tradedBy": "manual", "notes": "Chased the entry, paid the price", "createdAt": "2025-03-11T14:00:00.000Z" },
+    { "id": "d23", "accountId": "demo-mff-funded", "date": "2025-03-13", "pnl": 195, "entryPrice": 21540.00, "exitPrice": 21637.50, "entryTime": "09:36", "exitTime": "10:40", "tradedBy": "manual", "notes": "Clean level-to-level trade", "createdAt": "2025-03-13T14:40:00.000Z" }
+  ],
+  "payouts": [
+    { "id": "p01", "accountId": "demo-topstep-funded", "date": "2025-03-14", "amount": 500, "note": "First payout request", "createdAt": "2025-03-14T12:00:00.000Z" }
+  ]
+}
