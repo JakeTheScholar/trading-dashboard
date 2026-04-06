@@ -1,21 +1,78 @@
 "use strict";
 
+const FUTURES = {
+  MNQ: { name: 'Micro Nasdaq-100',    fee: 0.74, group: 'Micro Equity' },
+  MES: { name: 'Micro S&P 500',       fee: 0.74, group: 'Micro Equity' },
+  MYM: { name: 'Micro Dow',           fee: 0.74, group: 'Micro Equity' },
+  M2K: { name: 'Micro Russell 2000',  fee: 0.74, group: 'Micro Equity' },
+  NQ:  { name: 'E-mini Nasdaq-100',   fee: 2.24, group: 'E-mini Equity' },
+  ES:  { name: 'E-mini S&P 500',      fee: 2.24, group: 'E-mini Equity' },
+  YM:  { name: 'E-mini Dow',          fee: 2.24, group: 'E-mini Equity' },
+  RTY: { name: 'E-mini Russell 2000', fee: 2.24, group: 'E-mini Equity' },
+  MGC: { name: 'Micro Gold',          fee: 0.90, group: 'Micro Metals' },
+  SIL: { name: 'Micro Silver',        fee: 0.90, group: 'Micro Metals' },
+  MHG: { name: 'Micro Copper',        fee: 0.90, group: 'Micro Metals' },
+  GC:  { name: 'Gold (COMEX)',        fee: 2.50, group: 'Metals' },
+  SI:  { name: 'Silver (COMEX)',      fee: 2.50, group: 'Metals' },
+  HG:  { name: 'Copper (COMEX)',      fee: 2.50, group: 'Metals' },
+  MCL: { name: 'Micro Crude Oil',     fee: 0.90, group: 'Micro Energy' },
+  MNG: { name: 'Micro Natural Gas',   fee: 0.90, group: 'Micro Energy' },
+  CL:  { name: 'Crude Oil (WTI)',     fee: 2.50, group: 'Energy' },
+  NG:  { name: 'Natural Gas',         fee: 2.50, group: 'Energy' },
+};
+
 const Journal = {
   filters: { firm: 'all', outcome: 'all', range: 'month' },
-  editingId: null,
+  selectedIds: [],
+  bulkEditMode: false,
   expandedId: null,
+
+  symbolOptions() {
+    let html = '';
+    const groups = {};
+    Object.entries(FUTURES).forEach(([sym, info]) => {
+      if (!groups[info.group]) groups[info.group] = [];
+      groups[info.group].push(sym);
+    });
+    Object.entries(groups).forEach(([group, syms]) => {
+      html += '<optgroup label="' + group + '">';
+      syms.forEach(sym => {
+        html += '<option value="' + sym + '">' + sym + ' — ' + FUTURES[sym].name + ' ($' + FUTURES[sym].fee.toFixed(2) + '/ct)</option>';
+      });
+      html += '</optgroup>';
+    });
+    return html;
+  },
 
   render(el) {
     const accounts = Store.getAccounts().filter(a => a.status === 'active');
     let html = '';
 
-    html += '<div class="panel" style="padding:24px;margin-bottom:24px">';
-    html += '<div style="font-size:15px;font-weight:600;margin-bottom:16px"><span style="color:var(--gold)">+</span> ' + (Journal.editingId ? 'Edit Trade' : 'Quick Trade Entry') + '</div>';
+    const isEditing = Journal.bulkEditMode && Journal.selectedIds.length > 0;
+    const firstEntry = isEditing ? Store.getEntry(Journal.selectedIds[0]) : null;
+
+    // --- Form (New Entry or Edit Mode) ---
+    html += '<div class="panel" style="padding:24px;margin-bottom:24px' + (isEditing ? ';border-left:3px solid var(--gold)' : '') + '">';
+
+    if (isEditing) {
+      html += '<div style="font-size:15px;font-weight:600;margin-bottom:16px"><span style="color:var(--gold)">&#9998;</span> Edit ' + Journal.selectedIds.length + ' Selected Trade' + (Journal.selectedIds.length > 1 ? 's' : '') + '</div>';
+    } else {
+      html += '<div style="font-size:15px;font-weight:600;margin-bottom:16px"><span style="color:var(--gold)">+</span> Quick Trade Entry</div>';
+    }
 
     html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:12px">';
-    if (Journal.editingId) {
+
+    if (isEditing) {
+      const selectedEntries = Journal.selectedIds.map(id => Store.getEntry(id)).filter(Boolean);
+      const uniqueAcctIds = [...new Set(selectedEntries.map(e => e.accountId))];
+      const mixedAccounts = uniqueAcctIds.length > 1;
       html += '<div><div class="form-label">Account</div><select class="form-input" id="j-account">';
-      accounts.forEach(a => { html += '<option value="' + a.id + '">' + UI.esc(a.name) + '</option>'; });
+      if (mixedAccounts) {
+        html += '<option value="__keep__" selected>&#8212; Keep Each Account &#8212;</option>';
+      }
+      accounts.forEach(a => {
+        html += '<option value="' + a.id + '"' + (!mixedAccounts && firstEntry && a.id === firstEntry.accountId ? ' selected' : '') + '>' + UI.esc(a.name) + '</option>';
+      });
       html += '</select></div>';
     } else {
       html += '<div><div class="form-label">Accounts <span style="font-size:9px;color:var(--text-muted);text-transform:none;letter-spacing:0">(select multiple)</span></div>';
@@ -27,27 +84,40 @@ const Journal = {
       });
       html += '</div></div>';
     }
-    html += '<div><div class="form-label">Date</div><input type="date" class="form-input" id="j-date" value="' + UI.today() + '"></div>';
-    html += '<div><div class="form-label">P&L ($)</div><input type="text" class="form-input" id="j-pnl" placeholder="+275 or -150"></div>';
-    html += '<div><div class="form-label">Entry Price</div><input type="text" class="form-input" id="j-entry-price" placeholder="21,450.25"></div>';
-    html += '<div><div class="form-label">Exit Price</div><input type="text" class="form-input" id="j-exit-price" placeholder="21,462.50"></div>';
+
+    html += '<div><div class="form-label">Date</div><input type="date" class="form-input" id="j-date" value="' + (isEditing && firstEntry ? UI.esc(firstEntry.date) : UI.today()) + '"></div>';
+    html += '<div><div class="form-label">P&L ($)</div><input type="text" class="form-input" id="j-pnl" placeholder="+275 or -150" value="' + (isEditing && firstEntry && firstEntry.pnl != null ? firstEntry.pnl : '') + '"></div>';
+    html += '<div><div class="form-label">Entry Price</div><input type="text" class="form-input" id="j-entry-price" placeholder="21,450.25" value="' + (isEditing && firstEntry && firstEntry.entryPrice ? firstEntry.entryPrice : '') + '"></div>';
+    html += '<div><div class="form-label">Exit Price</div><input type="text" class="form-input" id="j-exit-price" placeholder="21,462.50" value="' + (isEditing && firstEntry && firstEntry.exitPrice ? firstEntry.exitPrice : '') + '"></div>';
     html += '</div>';
 
-    html += '<div style="display:grid;grid-template-columns:140px 140px 120px 1fr;gap:12px;margin-bottom:12px">';
-    html += '<div><div class="form-label">Entry Time</div><input type="time" class="form-input" id="j-entry-time"></div>';
-    html += '<div><div class="form-label">Exit Time</div><input type="time" class="form-input" id="j-exit-time"></div>';
-    html += '<div><div class="form-label">Traded By</div><select class="form-input" id="j-traded-by"><option value="manual">Manual</option><option value="bot">Bot</option></select></div>';
-    html += '<div><div class="form-label">Notes</div><textarea class="form-input" id="j-notes" rows="2" placeholder="What did you see? Why did you enter? What did you learn?" style="resize:vertical;min-height:42px"></textarea></div>';
+    const initSymbol = isEditing && firstEntry && firstEntry.symbol ? firstEntry.symbol : 'MNQ';
+    const initContracts = isEditing && firstEntry && firstEntry.contracts ? firstEntry.contracts : '';
+    const feePerSide = FUTURES[initSymbol] ? FUTURES[initSymbol].fee : 0;
+    const initFee = initContracts ? (parseFloat(initContracts) * feePerSide).toFixed(2) : '0.00';
+
+    html += '<div style="display:grid;grid-template-columns:1fr 80px 90px 130px 130px 110px;gap:12px;margin-bottom:12px">';
+    html += '<div><div class="form-label">Symbol</div><select class="form-input" id="j-symbol" onchange="Journal.updateFee()">' + Journal.symbolOptions().replace('value="' + initSymbol + '"', 'value="' + initSymbol + '" selected') + '</select></div>';
+    html += '<div><div class="form-label">Contracts</div><input type="number" class="form-input" id="j-contracts" min="0" step="1" placeholder="1" value="' + initContracts + '" oninput="Journal.updateFee()"></div>';
+    html += '<div><div class="form-label">Fees</div><div class="form-input" id="j-fees-display" style="background:var(--deep);color:var(--text-muted);cursor:default">$' + initFee + '</div></div>';
+    html += '<div><div class="form-label">Entry Time</div><input type="text" class="form-input" id="j-entry-time" placeholder="e.g. 9:30 or 9.5" value="' + (isEditing && firstEntry ? UI.esc(firstEntry.entryTime || '') : '') + '"></div>';
+    html += '<div><div class="form-label">Exit Time</div><input type="text" class="form-input" id="j-exit-time" placeholder="e.g. 10:15 or 10.25" value="' + (isEditing && firstEntry ? UI.esc(firstEntry.exitTime || '') : '') + '"></div>';
+    html += '<div><div class="form-label">Traded By</div><select class="form-input" id="j-traded-by"><option value="manual"' + (isEditing && firstEntry && firstEntry.tradedBy === 'bot' ? '' : ' selected') + '>Manual</option><option value="bot"' + (isEditing && firstEntry && firstEntry.tradedBy === 'bot' ? ' selected' : '') + '>Bot</option></select></div>';
     html += '</div>';
+
+    html += '<div style="margin-bottom:12px"><div class="form-label">Notes</div><textarea class="form-input" id="j-notes" rows="2" placeholder="What did you see? Why did you enter? What did you learn?" style="resize:vertical;min-height:42px">' + (isEditing && firstEntry ? UI.esc(firstEntry.notes || '') : '') + '</textarea></div>';
 
     html += '<div style="display:flex;justify-content:flex-end;gap:8px">';
-    if (Journal.editingId) {
+    if (isEditing) {
       html += '<button class="btn btn-ghost btn-sm" onclick="Journal.cancelEdit()">Cancel</button>';
+      html += '<button class="btn btn-primary btn-sm" onclick="Journal.saveEdit()">Update ' + Journal.selectedIds.length + ' Trade' + (Journal.selectedIds.length > 1 ? 's' : '') + '</button>';
+    } else {
+      html += '<button class="btn btn-ghost btn-sm" onclick="Journal.clearForm()">Clear</button>';
+      html += '<button class="btn btn-primary btn-sm" onclick="Journal.saveEntry()">Log Trade</button>';
     }
-    html += '<button class="btn btn-ghost btn-sm" onclick="Journal.clearForm()">Clear</button>';
-    html += '<button class="btn btn-primary btn-sm" onclick="Journal.saveEntry()">' + (Journal.editingId ? 'Update Trade' : 'Log Trade') + '</button>';
     html += '</div></div>';
 
+    // --- Filters ---
     html += '<div style="display:flex;gap:12px;align-items:center;margin-bottom:16px;flex-wrap:wrap">';
     ['all', 'topstep', 'apex', 'mff', 'alpha', 'lucid'].forEach(f => {
       const labels = { all: 'All Accounts', topstep: 'Topstep', apex: 'Apex', mff: 'MFF', alpha: 'Alpha', lucid: 'Lucid' };
@@ -65,6 +135,17 @@ const Journal = {
     });
     html += '</div>';
 
+    // --- Selection toolbar ---
+    if (Journal.selectedIds.length > 0 && !Journal.bulkEditMode) {
+      html += '<div style="display:flex;align-items:center;gap:12px;padding:10px 16px;margin-bottom:12px;background:rgba(212,175,55,0.08);border:1px solid var(--gold-dim);border-radius:8px;font-size:13px">';
+      html += '<span style="color:var(--gold);font-weight:600">' + Journal.selectedIds.length + ' selected</span>';
+      html += '<button class="btn btn-primary btn-sm" onclick="Journal.startBulkEdit()" style="font-size:11px;padding:4px 12px">Edit Selected &#8593;</button>';
+      html += '<button class="btn btn-ghost btn-sm" onclick="Journal.deleteSelected()" style="font-size:11px;padding:4px 12px;color:var(--red)">Delete Selected</button>';
+      html += '<button class="btn btn-ghost btn-sm" onclick="Journal.clearSelection()" style="font-size:11px;padding:4px 12px">Clear</button>';
+      html += '</div>';
+    }
+
+    // --- Trade Table ---
     const allEntries = Store.getJournal();
     const allAccounts = Store.getAccounts();
     let filtered = allEntries.slice();
@@ -82,10 +163,15 @@ const Journal = {
 
     filtered.sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
 
-    html += '<div class="panel" style="overflow:hidden">';
+    html += '<div class="panel" style="overflow-x:auto">';
+    html += '<div style="min-width:860px">';
 
-    html += '<div style="display:grid;grid-template-columns:80px 140px 90px 90px 90px 70px 70px 1fr 50px;padding:12px 16px;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);border-bottom:1px solid var(--glass-border);background:var(--deep)">';
-    html += '<div>Date</div><div>Account</div><div>P&L</div><div>Entry</div><div>Exit</div><div>In</div><div>Out</div><div>Notes</div><div></div>';
+    const colTpl = '30px 72px 130px 85px 68px 52px 78px 78px 52px 52px 1fr 40px';
+    const allFilteredIds = filtered.map(e => e.id);
+    const allSelected = filtered.length > 0 && allFilteredIds.every(id => Journal.selectedIds.includes(id));
+    html += '<div style="display:grid;grid-template-columns:' + colTpl + ';padding:12px 16px;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);border-bottom:1px solid var(--glass-border);background:var(--deep)">';
+    html += '<div><input type="checkbox" ' + (allSelected ? 'checked' : '') + ' onchange="Journal.toggleSelectAll(this.checked)" style="accent-color:var(--gold);cursor:pointer"></div>';
+    html += '<div>Date</div><div>Account</div><div>P&L</div><div>Qty</div><div>Fees</div><div>Entry</div><div>Exit</div><div>In</div><div>Out</div><div>Notes</div><div></div>';
     html += '</div>';
 
     if (filtered.length === 0) {
@@ -95,17 +181,26 @@ const Journal = {
     filtered.forEach(entry => {
       const acct = Store.getAccount(entry.accountId);
       const isExpanded = Journal.expandedId === entry.id;
+      const isSelected = Journal.selectedIds.includes(entry.id);
+      const contracts = entry.contracts || 0;
+      const sym = entry.symbol || '';
+      const feeRate = FUTURES[sym] ? FUTURES[sym].fee : 0;
+      const fees = (contracts * feeRate).toFixed(2);
+      const qtyLabel = contracts ? contracts + (sym ? ' ' + sym : '') : '-';
 
-      html += '<div class="journal-row" style="display:grid;grid-template-columns:80px 140px 90px 90px 90px 70px 70px 1fr 50px;padding:14px 16px;font-size:13px;border-bottom:1px solid var(--glass-border);align-items:center;cursor:pointer" onclick="Journal.toggleExpand(\'' + entry.id + '\')">';
+      html += '<div class="journal-row" style="display:grid;grid-template-columns:' + colTpl + ';padding:14px 16px;font-size:13px;border-bottom:1px solid var(--glass-border);align-items:center;cursor:pointer' + (isSelected ? ';background:rgba(212,175,55,0.05)' : '') + '" onclick="Journal.toggleExpand(\'' + entry.id + '\')">';
+      html += '<div onclick="event.stopPropagation()"><input type="checkbox" ' + (isSelected ? 'checked' : '') + ' onchange="Journal.toggleSelect(\'' + entry.id + '\')" style="accent-color:var(--gold);cursor:pointer"></div>';
       html += '<div>' + UI.formatDate(entry.date) + '</div>';
-      html += '<div>' + (acct ? UI.firmBadgeHtml(acct.firm) + ' ' + UI.esc(acct.name) : 'Unknown') + '</div>';
+      html += '<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + (acct ? UI.esc(acct.name) : 'Unknown') + '">' + (acct ? UI.firmBadgeHtml(acct.firm) + ' ' + UI.esc(acct.name) : 'Unknown') + '</div>';
       html += '<div style="font-weight:500;' + UI.pnlClass(entry.pnl) + '">' + UI.currencySign(entry.pnl) + (entry.tradedBy === 'bot' ? ' <span style="font-size:9px;padding:1px 4px;border-radius:3px;background:rgba(139,92,246,0.15);color:var(--violet);font-weight:500">BOT</span>' : '') + '</div>';
+      html += '<div style="color:var(--text-secondary);font-size:12px">' + UI.esc(qtyLabel) + '</div>';
+      html += '<div style="color:var(--text-muted);font-size:11px">' + (contracts ? '$' + fees : '-') + '</div>';
       html += '<div>' + UI.formatPrice(entry.entryPrice) + '</div>';
       html += '<div>' + UI.formatPrice(entry.exitPrice) + '</div>';
       html += '<div>' + UI.esc(entry.entryTime || '-') + '</div>';
       html += '<div>' + UI.esc(entry.exitTime || '-') + '</div>';
-      html += '<div style="color:var(--text-secondary);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + UI.esc(entry.notes || '') + '</div>';
-      html += '<div style="display:flex;gap:4px">';
+      html += '<div style="min-width:0;color:var(--text-secondary);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + UI.esc(entry.notes || '') + '</div>';
+      html += '<div style="display:flex;gap:2px">';
       html += '<span style="cursor:pointer;padding:2px 4px;color:var(--text-muted);font-size:12px;transition:color 0.2s;opacity:0.5" onmouseenter="this.style.opacity=1;this.style.color=\'var(--gold)\'" onmouseleave="this.style.opacity=0.5;this.style.color=\'var(--text-muted)\'" onclick="event.stopPropagation();Journal.editEntry(\'' + entry.id + '\')">&#9998;</span>';
       html += '<span style="cursor:pointer;padding:2px 4px;color:var(--text-muted);font-size:12px;transition:color 0.2s;opacity:0.5" onmouseenter="this.style.opacity=1;this.style.color=\'var(--red)\'" onmouseleave="this.style.opacity=0.5;this.style.color=\'var(--text-muted)\'" onclick="event.stopPropagation();Journal.deleteEntry(\'' + entry.id + '\')">&#128465;</span>';
       html += '</div></div>';
@@ -116,6 +211,11 @@ const Journal = {
     });
 
     const netPnl = filtered.reduce((s, e) => s + e.pnl, 0);
+    const totalFees = filtered.reduce((s, e) => {
+      const c = e.contracts || 0;
+      const r = FUTURES[e.symbol] ? FUTURES[e.symbol].fee : 0;
+      return s + c * r;
+    }, 0);
     const fWins = filtered.filter(e => e.pnl > 0);
     const fLosses = filtered.filter(e => e.pnl < 0);
     const fWinRate = filtered.length > 0 ? fWins.length / filtered.length : 0;
@@ -128,15 +228,23 @@ const Journal = {
     html += '<div style="display:flex;gap:24px;padding:12px 16px;background:var(--deep);border-top:1px solid var(--glass-border);font-size:12px;color:var(--text-secondary);flex-wrap:wrap">';
     html += '<span>Showing <span style="color:var(--text);font-weight:500">' + filtered.length + '</span> trades</span>';
     html += '<span>Net P&L: <span style="color:' + UI.pnlColor(netPnl) + ';font-weight:500">' + UI.currencySign(netPnl) + '</span></span>';
+    html += '<span>Fees: <span style="color:var(--text-muted);font-weight:500">$' + totalFees.toFixed(2) + '</span></span>';
+    html += '<span>Net After Fees: <span style="color:' + UI.pnlColor(netPnl - totalFees) + ';font-weight:500">' + UI.currencySign(netPnl - totalFees) + '</span></span>';
     html += '<span>Win Rate: <span style="color:var(--text);font-weight:500">' + UI.pct(fWinRate * 100) + '</span></span>';
-    html += '<span>Avg Win: <span style="color:var(--green);font-weight:500">' + UI.currencySign(fAvgWin) + '</span></span>';
-    html += '<span>Avg Loss: <span style="color:var(--red);font-weight:500">' + UI.currency(fAvgLoss) + '</span></span>';
-    html += '<span>Profit Factor: <span style="color:var(--text);font-weight:500">' + (fPF === Infinity ? '∞' : fPF.toFixed(2)) + '</span></span>';
+    html += '<span>PF: <span style="color:var(--text);font-weight:500">' + (fPF === Infinity ? '&#8734;' : fPF.toFixed(2)) + '</span></span>';
     html += '</div>';
 
-    html += '</div>';
+    html += '</div>'; // close min-width wrapper
+    html += '</div>'; // close panel
 
     el.innerHTML = html;
+  },
+
+  updateFee() {
+    const sym = document.getElementById('j-symbol').value;
+    const contracts = parseFloat(document.getElementById('j-contracts').value) || 0;
+    const rate = FUTURES[sym] ? FUTURES[sym].fee : 0;
+    document.getElementById('j-fees-display').textContent = '$' + (contracts * rate).toFixed(2);
   },
 
   parseNumber(str) {
@@ -144,61 +252,142 @@ const Journal = {
     return parseFloat(str.replace(/[,$\s+]/g, '')) || 0;
   },
 
-  saveEntry() {
-    const date = document.getElementById('j-date').value;
-    const pnl = Journal.parseNumber(document.getElementById('j-pnl').value);
-    const entryPrice = Journal.parseNumber(document.getElementById('j-entry-price').value);
-    const exitPrice = Journal.parseNumber(document.getElementById('j-exit-price').value);
-    const entryTime = document.getElementById('j-entry-time').value;
-    const exitTime = document.getElementById('j-exit-time').value;
-    const tradedBy = document.getElementById('j-traded-by').value;
-    const notes = document.getElementById('j-notes').value.trim();
+  _readForm() {
+    return {
+      date: document.getElementById('j-date').value,
+      pnl: Journal.parseNumber(document.getElementById('j-pnl').value),
+      symbol: document.getElementById('j-symbol').value,
+      contracts: parseInt(document.getElementById('j-contracts').value) || 0,
+      entryPrice: Journal.parseNumber(document.getElementById('j-entry-price').value),
+      exitPrice: Journal.parseNumber(document.getElementById('j-exit-price').value),
+      entryTime: document.getElementById('j-entry-time').value.trim(),
+      exitTime: document.getElementById('j-exit-time').value.trim(),
+      tradedBy: document.getElementById('j-traded-by').value,
+      notes: document.getElementById('j-notes').value.trim(),
+    };
+  },
 
-    if (Journal.editingId) {
-      const accountId = document.getElementById('j-account').value;
-      if (!accountId || !date) { alert('Account and date are required.'); return; }
-      Store.saveEntry({ id: Journal.editingId, accountId, date, pnl, entryPrice, exitPrice, entryTime, exitTime, tradedBy, notes });
-    } else {
-      const checked = document.querySelectorAll('.j-account-cb:checked');
-      const accountIds = Array.from(checked).map(cb => cb.value);
-      if (accountIds.length === 0 || !date) { alert('Select at least one account and a date.'); return; }
-      accountIds.forEach(accountId => {
-        Store.saveEntry({ accountId, date, pnl, entryPrice, exitPrice, entryTime, exitTime, tradedBy, notes });
-      });
-    }
-    Journal.editingId = null;
+  saveEntry() {
+    const f = Journal._readForm();
+    const rate = FUTURES[f.symbol] ? FUTURES[f.symbol].fee : 0;
+    f.fees = parseFloat((f.contracts * rate).toFixed(2));
+
+    const checked = document.querySelectorAll('.j-account-cb:checked');
+    const accountIds = Array.from(checked).map(cb => cb.value);
+    if (accountIds.length === 0 || !f.date) { alert('Select at least one account and a date.'); return; }
+    accountIds.forEach(accountId => {
+      Store.saveEntry({ ...f, accountId });
+    });
+    Journal.render(document.getElementById('content'));
+  },
+
+  saveEdit() {
+    const accountVal = document.getElementById('j-account').value;
+    const keepAccount = accountVal === '__keep__';
+    const f = Journal._readForm();
+    const rate = FUTURES[f.symbol] ? FUTURES[f.symbol].fee : 0;
+    f.fees = parseFloat((f.contracts * rate).toFixed(2));
+
+    if ((!keepAccount && !accountVal) || !f.date) { alert('Account and date are required.'); return; }
+
+    Journal.selectedIds.forEach(id => {
+      const existing = Store.getEntry(id);
+      const acctId = keepAccount && existing ? existing.accountId : accountVal;
+      Store.saveEntry({ ...f, id, accountId: acctId });
+    });
+
+    Journal.selectedIds = [];
+    Journal.bulkEditMode = false;
     Journal.render(document.getElementById('content'));
   },
 
   clearForm() {
-    Journal.editingId = null;
-    Journal.render(document.getElementById('content'));
+    document.getElementById('j-date').value = UI.today();
+    document.getElementById('j-pnl').value = '';
+    document.getElementById('j-symbol').value = 'MNQ';
+    document.getElementById('j-contracts').value = '';
+    document.getElementById('j-fees-display').textContent = '$0.00';
+    document.getElementById('j-entry-price').value = '';
+    document.getElementById('j-exit-price').value = '';
+    document.getElementById('j-entry-time').value = '';
+    document.getElementById('j-exit-time').value = '';
+    document.getElementById('j-traded-by').value = 'manual';
+    document.getElementById('j-notes').value = '';
+    document.querySelectorAll('.j-account-cb').forEach(cb => { cb.checked = false; });
   },
 
   cancelEdit() {
-    Journal.editingId = null;
+    Journal.selectedIds = [];
+    Journal.bulkEditMode = false;
     Journal.render(document.getElementById('content'));
   },
 
   editEntry(id) {
-    Journal.editingId = id;
+    Journal.selectedIds = [id];
+    Journal.bulkEditMode = true;
     Journal.render(document.getElementById('content'));
-    const entry = Store.getEntry(id);
-    if (entry) {
-      document.getElementById('j-account').value = entry.accountId;
-      document.getElementById('j-date').value = entry.date;
-      document.getElementById('j-pnl').value = entry.pnl;
-      document.getElementById('j-entry-price').value = entry.entryPrice || '';
-      document.getElementById('j-exit-price').value = entry.exitPrice || '';
-      document.getElementById('j-entry-time').value = entry.entryTime || '';
-      document.getElementById('j-exit-time').value = entry.exitTime || '';
-      document.getElementById('j-traded-by').value = entry.tradedBy || 'manual';
-      document.getElementById('j-notes').value = entry.notes || '';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  },
+
+  toggleSelect(id) {
+    const idx = Journal.selectedIds.indexOf(id);
+    if (idx >= 0) {
+      Journal.selectedIds.splice(idx, 1);
+    } else {
+      Journal.selectedIds.push(id);
+    }
+    if (Journal.selectedIds.length === 0) {
+      Journal.bulkEditMode = false;
+    }
+    Journal.render(document.getElementById('content'));
+  },
+
+  toggleSelectAll(checked) {
+    const allEntries = Store.getJournal();
+    const allAccounts = Store.getAccounts();
+    let filtered = allEntries.slice();
+    if (Journal.filters.firm !== 'all') {
+      const firmAccountIds = allAccounts.filter(a => a.firm === Journal.filters.firm).map(a => a.id);
+      filtered = filtered.filter(e => firmAccountIds.includes(e.accountId));
+    }
+    if (Journal.filters.outcome === 'winners') filtered = filtered.filter(e => e.pnl > 0);
+    if (Journal.filters.outcome === 'losers') filtered = filtered.filter(e => e.pnl < 0);
+    const range = Rules.dateRange(Journal.filters.range);
+    filtered = filtered.filter(e => e.date >= range.start && e.date <= range.end);
+
+    if (checked) {
+      Journal.selectedIds = filtered.map(e => e.id);
+    } else {
+      Journal.selectedIds = [];
+      Journal.bulkEditMode = false;
+    }
+    Journal.render(document.getElementById('content'));
+  },
+
+  startBulkEdit() {
+    Journal.bulkEditMode = true;
+    Journal.render(document.getElementById('content'));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  },
+
+  clearSelection() {
+    Journal.selectedIds = [];
+    Journal.bulkEditMode = false;
+    Journal.render(document.getElementById('content'));
+  },
+
+  deleteSelected() {
+    if (confirm('Delete ' + Journal.selectedIds.length + ' selected trade(s)?')) {
+      Journal.selectedIds.forEach(id => Store.deleteEntry(id));
+      Journal.selectedIds = [];
+      Journal.bulkEditMode = false;
+      Journal.render(document.getElementById('content'));
     }
   },
 
   deleteEntry(id) {
     if (confirm('Delete this trade entry?')) {
+      Journal.selectedIds = Journal.selectedIds.filter(sid => sid !== id);
       Store.deleteEntry(id);
       Journal.render(document.getElementById('content'));
     }
@@ -212,5 +401,69 @@ const Journal = {
   setFilter(key, value) {
     Journal.filters[key] = value;
     Journal.render(document.getElementById('content'));
+  },
+
+  // One-time data repair. Run from browser console: Journal.repairData()
+  // 1) Fixes Apex account starting balances to $5,000 (profit comes from journal)
+  // 2) Ensures the 3 trades (-57, +9.5, +38) each have one entry per active account
+  //    with symbol=MNQ and contracts=1
+  repairData() {
+    const allAccounts = Store.getAccounts();
+    const accounts = allAccounts.filter(a => a.status === 'active');
+    if (accounts.length === 0) { console.log('No active accounts'); return; }
+
+    // --- Fix Apex starting balances ---
+    allAccounts.forEach(a => {
+      if (a.firm === 'apex' && a.startingBalance !== 5000) {
+        console.log('Fixing ' + a.name + ': startingBalance ' + a.startingBalance + ' -> 5000');
+        Store.saveAccount({ ...a, startingBalance: 5000 });
+      }
+    });
+
+    // --- Fix journal entries ---
+    const journal = Store.getJournal();
+    const targetPnls = [-57, 9.5, 38];
+    let totalFixed = 0;
+
+    targetPnls.forEach(pnl => {
+      const matching = journal.filter(e => e.pnl === pnl);
+      if (matching.length === 0) { console.log('No entries with P&L ' + pnl); return; }
+
+      const src = matching[0];
+      const date = src.date;
+      const entryPrice = src.entryPrice || 0;
+      const exitPrice = src.exitPrice || 0;
+      const entryTime = src.entryTime || '';
+      const exitTime = src.exitTime || '';
+      const tradedBy = src.tradedBy || 'manual';
+      const notes = src.notes || '';
+
+      matching.forEach(e => Store.deleteEntry(e.id));
+
+      accounts.forEach(a => {
+        Store.saveEntry({
+          accountId: a.id, date, pnl,
+          symbol: 'MNQ', contracts: 1, fees: 0.74,
+          entryPrice, exitPrice, entryTime, exitTime, tradedBy, notes,
+        });
+      });
+
+      console.log('P&L ' + pnl + ': replaced ' + matching.length + ' entries with ' + accounts.length + ' (one per account)');
+      totalFixed += accounts.length;
+    });
+
+    // --- Report final state ---
+    const updatedAccounts = Store.getAccounts().filter(a => a.status === 'active');
+    const updatedJournal = Store.getJournal();
+    updatedAccounts.forEach(a => {
+      const entries = updatedJournal.filter(e => e.accountId === a.id);
+      const pnl = entries.reduce((s, e) => s + e.pnl, 0);
+      console.log(a.name + ': starting=$' + a.startingBalance + ', P&L=$' + pnl.toFixed(2) + ', balance=$' + (a.startingBalance + pnl).toFixed(2));
+    });
+
+    console.log('Done — ' + totalFixed + ' journal entries fixed. Refreshing...');
+    if (document.getElementById('content')) {
+      try { App.navigate(App.currentPage || 'dashboard'); } catch(e) { location.reload(); }
+    }
   },
 };

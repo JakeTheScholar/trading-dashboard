@@ -32,14 +32,21 @@ const Dashboard = {
     const today = UI.today();
     const todayPnl = journal.filter(j => j.date === today).reduce((s, e) => s + e.pnl, 0);
     const totalPnl = journal.reduce((s, e) => s + e.pnl, 0);
+    const totalFees = journal.reduce((s, e) => {
+      const c = e.contracts || 0;
+      const r = typeof FUTURES !== 'undefined' && FUTURES[e.symbol] ? FUTURES[e.symbol].fee : 0;
+      return s + c * r;
+    }, 0);
+    const netAfterFees = totalPnl - totalFees;
     const wins = journal.filter(j => j.pnl > 0).length;
     const winRate = journal.length > 0 ? wins / journal.length : 0;
 
-    html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px">';
+    html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:24px">';
     html += '<div class="stat-card" style="animation-delay:0ms"><div class="stat-label">Total Equity</div><div class="stat-value">' + UI.currency(totalEquity) + '</div><div style="font-size:12px;color:var(--text-secondary);margin-top:4px">across ' + accounts.length + ' account' + (accounts.length !== 1 ? 's' : '') + '</div></div>';
     html += '<div class="stat-card" style="animation-delay:50ms"><div class="stat-label">Today\'s P&L</div><div class="stat-value" style="' + UI.pnlClass(todayPnl) + '">' + UI.currencySign(todayPnl) + '</div></div>';
-    html += '<div class="stat-card" style="animation-delay:100ms"><div class="stat-label">Total P&L</div><div class="stat-value" style="' + UI.pnlClass(totalPnl) + '">' + UI.currencySign(totalPnl) + '</div></div>';
-    html += '<div class="stat-card" style="animation-delay:150ms"><div class="stat-label">Win Rate</div><div class="stat-value">' + UI.pct(winRate * 100) + '</div><div style="font-size:12px;color:var(--text-secondary);margin-top:4px">' + wins + ' of ' + journal.length + ' trades</div></div>';
+    html += '<div class="stat-card" style="animation-delay:100ms"><div class="stat-label">Total P&L</div><div class="stat-value" style="' + UI.pnlClass(totalPnl) + '">' + UI.currencySign(totalPnl) + '</div>' + (totalFees > 0 ? '<div style="font-size:12px;color:var(--text-muted);margin-top:4px">Fees: $' + totalFees.toFixed(2) + '</div>' : '') + '</div>';
+    html += '<div class="stat-card" style="animation-delay:150ms"><div class="stat-label">Net After Fees</div><div class="stat-value" style="' + UI.pnlClass(netAfterFees) + '">' + UI.currencySign(netAfterFees) + '</div></div>';
+    html += '<div class="stat-card" style="animation-delay:200ms"><div class="stat-label">Win Rate</div><div class="stat-value">' + UI.pct(winRate * 100) + '</div><div style="font-size:12px;color:var(--text-secondary);margin-top:4px">' + wins + ' of ' + journal.length + ' trades</div></div>';
     html += '</div>';
 
     // Payout Tracker

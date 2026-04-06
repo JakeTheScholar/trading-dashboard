@@ -152,7 +152,10 @@ const Store = {
       (!e.exitTime || this._isStr(e.exitTime, 10)) &&
       (!e.entryPrice || (this._isNum(e.entryPrice) && Math.abs(e.entryPrice) <= 1e9)) &&
       (!e.exitPrice || (this._isNum(e.exitPrice) && Math.abs(e.exitPrice) <= 1e9)) &&
-      (!e.tradedBy || ['manual', 'bot'].includes(e.tradedBy));
+      (!e.tradedBy || ['manual', 'bot'].includes(e.tradedBy)) &&
+      (!e.contracts || (this._isNum(e.contracts) && e.contracts >= 0 && e.contracts <= 10000)) &&
+      (!e.fees || (this._isNum(e.fees) && e.fees >= 0 && e.fees <= 1e6)) &&
+      (!e.symbol || this._isStr(e.symbol, 10));
   },
   _validatePayout(p) {
     return this._isObj(p) && this._isId(p.accountId) &&
