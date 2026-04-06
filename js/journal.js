@@ -163,8 +163,9 @@ const Journal = {
 
     filtered.sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
 
+    html += '<style>.jtbl > div > div{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}</style>';
     html += '<div class="panel" style="overflow-x:auto">';
-    html += '<div style="min-width:860px">';
+    html += '<div class="jtbl" style="min-width:860px">';
 
     const colTpl = '30px 72px 130px 85px 68px 52px 78px 78px 52px 52px 1fr 40px';
     const allFilteredIds = filtered.map(e => e.id);
@@ -199,7 +200,7 @@ const Journal = {
       html += '<div>' + UI.formatPrice(entry.exitPrice) + '</div>';
       html += '<div>' + UI.esc(entry.entryTime || '-') + '</div>';
       html += '<div>' + UI.esc(entry.exitTime || '-') + '</div>';
-      html += '<div style="min-width:0;color:var(--text-secondary);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + UI.esc(entry.notes || '') + '</div>';
+      html += '<div style="padding-left:8px;color:var(--text-secondary);font-size:12px">' + UI.esc(entry.notes || '') + '</div>';
       html += '<div style="display:flex;gap:2px">';
       html += '<span style="cursor:pointer;padding:2px 4px;color:var(--text-muted);font-size:12px;transition:color 0.2s;opacity:0.5" onmouseenter="this.style.opacity=1;this.style.color=\'var(--gold)\'" onmouseleave="this.style.opacity=0.5;this.style.color=\'var(--text-muted)\'" onclick="event.stopPropagation();Journal.editEntry(\'' + entry.id + '\')">&#9998;</span>';
       html += '<span style="cursor:pointer;padding:2px 4px;color:var(--text-muted);font-size:12px;transition:color 0.2s;opacity:0.5" onmouseenter="this.style.opacity=1;this.style.color=\'var(--red)\'" onmouseleave="this.style.opacity=0.5;this.style.color=\'var(--text-muted)\'" onclick="event.stopPropagation();Journal.deleteEntry(\'' + entry.id + '\')">&#128465;</span>';
